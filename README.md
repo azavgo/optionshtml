@@ -1,5 +1,5 @@
 # optionshtml
-## Browser-based library to estimate the outcome of an option trade
+## A library to estimate the outcome of an option trade
 
 ### Features: 
 1. Calculates how much each option costs;
@@ -13,7 +13,7 @@
     [dependencies]
     optionshtml = {git = "https://github.com/azavgo/optionshtml", branch = "main"}
 ```
-2. Generate am Iron Condor and calculate its parameters at expiration:  
+2. Generate an Iron Condor and calculate its parameters at expiration:  
 ```Rust
 use optionshtml::*; 
 
