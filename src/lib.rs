@@ -118,12 +118,237 @@ impl IronCondor {
         let be_2: f32 = self.c().strike() + (self.d().strike() - self.c().strike()) * self.profit() / (self.profit() - self.loss());
         (be_1, be_2)
     }
-
 }
+
+#[derive(Debug, Copy, Clone)]
+pub struct BullPutSpread {
+    a: Option, 
+    b: Option,  
+}
+
+impl BullPutSpread {
+    pub fn new(a: Option, b: Option) -> Self {
+        Self {a: a, b: b}
+    }
+
+    pub fn a(self: &Self) -> Option {
+        self.a
+    }
+
+    pub fn b(self: &Self) -> Option {
+        self.b
+    }
+
+    pub fn profit(self: &Self) -> f32 {
+        self.a().paid() + self.b().paid()
+    }
+
+    pub fn loss(self: &Self) -> f32 {
+        (self.a().strike() - self.b().strike()) * 100.00 + self.profit()
+    }
+
+    pub fn break_even(self: &Self) -> f32 {
+        self.a().strike() - (self.b().strike() - self.a().strike()) * self.loss() / (self.profit() - self.loss())
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct BearPutSpread {
+    a: Option, 
+    b: Option,  
+}
+
+impl BearPutSpread {
+    pub fn new(a: Option, b: Option) -> Self {
+        Self {a: a, b: b}
+    }
+
+    pub fn a(self: &Self) -> Option {
+        self.a
+    }
+
+    pub fn b(self: &Self) -> Option {
+        self.b
+    }
+
+    pub fn profit(self: &Self) -> f32 {
+        (self.b().strike() - self.a().strike()) * 100.00 + self.loss()
+    }
+
+    pub fn loss(self: &Self) -> f32 {
+        self.a().paid() + self.b().paid()
+    }
+
+    pub fn break_even(self: &Self) -> f32 {
+        self.a().strike() + (self.b().strike() - self.a().strike()) * self.profit() / (self.profit() - self.loss())
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct BullCallSpread {
+    a: Option, 
+    b: Option,  
+}
+
+impl BullCallSpread {
+    pub fn new(a: Option, b: Option) -> Self {
+        Self {a: a, b: b}
+    }
+
+    pub fn a(self: &Self) -> Option {
+        self.a
+    }
+
+    pub fn b(self: &Self) -> Option {
+        self.b
+    }
+
+    pub fn profit(self: &Self) -> f32 {
+        (self.b().strike() - self.a().strike()) * 100.00 + self.loss()
+    }
+
+    pub fn loss(self: &Self) -> f32 {
+        self.a().paid() + self.b().paid()
+    }
+
+    pub fn break_even(self: &Self) -> f32 {
+        self.a().strike() - (self.b().strike() - self.a().strike()) * self.loss() / (self.profit() - self.loss())    
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct BearCallSpread {
+    a: Option, 
+    b: Option,  
+}
+
+impl BearCallSpread {
+    pub fn new(a: Option, b: Option) -> Self {
+        Self {a: a, b: b}
+    }
+
+    pub fn a(self: &Self) -> Option {
+        self.a
+    }
+
+    pub fn b(self: &Self) -> Option {
+        self.b
+    }
+
+    pub fn profit(self: &Self) -> f32 {
+        self.a().paid() + self.b().paid()
+    }
+
+    pub fn loss(self: &Self) -> f32 {
+        (self.a().strike() - self.b().strike()) * 100.00 + self.profit()
+    }
+
+    pub fn break_even(self: &Self) -> f32 {
+        self.a().strike() + (self.b().strike() - self.a().strike()) * self.profit() / (self.profit() - self.loss())    
+    }
+}
+
 
 #[cfg(test)]
 mod tests {
     use super::*; 
+
+    #[test]
+    fn test_bearcallspread_profit_1() {
+        let a = Option::new(OptionType::Call, TradeType::Sold, 144.0, 12, 14.60, 0.0);
+        let b = Option::new(OptionType::Call, TradeType::Bought, 157.5, 12, 5.55, 0.0);
+        let strategy = BearCallSpread::new(a, b); 
+        assert_eq!(905.0, strategy.profit());
+    }
+
+    #[test]
+    fn test_bearcallspread_loss_1() {
+        let a = Option::new(OptionType::Call, TradeType::Sold, 144.0, 12, 14.60, 0.0);
+        let b = Option::new(OptionType::Call, TradeType::Bought, 157.5, 12, 5.55, 0.0);
+        let strategy = BearCallSpread::new(a, b); 
+        assert_eq!(-445.0, strategy.loss());
+    }
+
+    #[test]
+    fn test_bearcallspread_breakeven_1() {
+        let a = Option::new(OptionType::Call, TradeType::Sold, 144.0, 12, 14.60, 0.0);
+        let b = Option::new(OptionType::Call, TradeType::Bought, 157.5, 12, 5.55, 0.0);
+        let strategy = BearCallSpread::new(a, b); 
+        assert_eq!(153.05, strategy.break_even());
+    }
+
+    #[test]
+    fn test_bullcallspread_profit_1() {
+        let a = Option::new(OptionType::Call, TradeType::Bought, 157.5, 12, 5.55, 0.0);
+        let b = Option::new(OptionType::Call, TradeType::Sold, 170.0, 12, 1.07, 0.0);
+        let strategy = BullCallSpread::new(a, b); 
+        assert_eq!(802.0, strategy.profit());
+    }
+
+    #[test]
+    fn test_bullcallspread_loss_1() {
+        let a = Option::new(OptionType::Call, TradeType::Bought, 157.5, 12, 5.55, 0.0);
+        let b = Option::new(OptionType::Call, TradeType::Sold, 170.0, 12, 1.07, 0.0);
+        let strategy = BullCallSpread::new(a, b); 
+        assert_eq!(-448.0, strategy.loss());
+    }
+
+    #[test]
+    fn test_bullcallspread_breakeven_1() {
+        let a = Option::new(OptionType::Call, TradeType::Bought, 157.5, 12, 5.55, 0.0);
+        let b = Option::new(OptionType::Call, TradeType::Sold, 170.0, 12, 1.07, 0.0);
+        let strategy = BullCallSpread::new(a, b); 
+        assert_eq!(161.98, strategy.break_even());
+    }
+
+    #[test]
+    fn test_bearputspread_profit_1() {
+        let a = Option::new(OptionType::Put, TradeType::Sold, 145.0, 12, 2.18, 0.0);
+        let b = Option::new(OptionType::Put, TradeType::Bought, 155.0, 12, 5.25, 0.0);
+        let strategy = BearPutSpread::new(a, b); 
+        assert_eq!(693.0, strategy.profit());
+    }
+
+    #[test]
+    fn test_bearputspread_loss_1() {
+        let a = Option::new(OptionType::Put, TradeType::Sold, 145.0, 12, 2.18, 0.0);
+        let b = Option::new(OptionType::Put, TradeType::Bought, 155.0, 12, 5.25, 0.0);
+        let strategy = BearPutSpread::new(a, b); 
+        assert_eq!(-307.0, strategy.loss());
+    }
+
+    #[test]
+    fn test_bearputspread_break_even_1() {
+        let a = Option::new(OptionType::Put, TradeType::Sold, 145.0, 12, 2.18, 0.0);
+        let b = Option::new(OptionType::Put, TradeType::Bought, 155.0, 12, 5.25, 0.0);
+        let strategy = BearPutSpread::new(a, b); 
+        assert_eq!(151.93, strategy.break_even());
+    }
+
+    #[test]
+    fn test_bullputspread_profit_1() {
+        let a = Option::new(OptionType::Put, TradeType::Bought, 144.0, 12, 2.05, 0.0);
+        let b = Option::new(OptionType::Put, TradeType::Sold, 157.5, 12, 6.25, 0.0);
+        let strategy = BullPutSpread::new(a, b); 
+        assert_eq!(420.0, strategy.profit());
+    }
+
+    #[test]
+    fn test_bullputspread_loss_1() {
+        let a = Option::new(OptionType::Put, TradeType::Bought, 144.0, 12, 2.05, 0.0);
+        let b = Option::new(OptionType::Put, TradeType::Sold, 157.5, 12, 6.25, 0.0);
+        let strategy = BullPutSpread::new(a, b); 
+        assert_eq!(-930.0, strategy.loss());
+    }
+
+    #[test]
+    fn test_bullputspread_breakeven_1() {
+        let a = Option::new(OptionType::Put, TradeType::Bought, 144.0, 12, 2.05, 0.0);
+        let b = Option::new(OptionType::Put, TradeType::Sold, 157.5, 12, 6.25, 0.0);
+        let strategy = BullPutSpread::new(a, b); 
+        assert_eq!(153.30, strategy.break_even());
+    }
+
     #[test]
     fn test_option_paid() {
         let option = Option::new(OptionType::Put, TradeType::Sold, 100.0, 7, 0.5, 1.05);
@@ -169,6 +394,5 @@ mod tests {
         let strategy = IronCondor::new(a, b, c, d); 
         assert_eq!((195.75, 224.25), strategy.break_even());
     }
-
 
 }
