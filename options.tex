@@ -1,0 +1,58 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+
+\title{options}
+\author{azavgo}
+\date{September 2022}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+
+Let's assume that: 
+\begin{itemize}
+    \item $S$ is the current price of the underline;
+    \item $K$ is the strike price
+    \item $\sigma$ is the implied volatility of the underline
+    \item $T$ is the time to expiration from now in years
+    \item $r$ is the current central bank annual cash rate
+    \item $C$ is the option price
+\end{itemize}
+
+\begin{equation}
+    C = N\left(d_1\right) \times S - N\left(d_2\right) \times PV\left(K\right) 
+\end{equation}
+Where: \\\\
+\begin{equation}
+    d_1 = \frac{1}{\sigma \sqrt{T}} \left(lg\frac{S}{K} + \left(r + \frac{\sigma^2}{2}\right)T\right)
+\end{equation}
+
+\begin{equation}
+    d_2 = d_1 - \sigma \sqrt{T}
+\end{equation}
+
+\begin{equation}
+    PV\left(K\right) = K \cdot e^{-rT}  
+\end{equation}
+
+\begin{equation}
+    N\left(d\right) = \frac{1}{\sqrt{2\pi}} \int_{-\infty}^{d} e^{-\frac{t^2}{2}} \,dt 
+\end{equation}
+\\
+Let's use the \href{https://www.mathworks.com/help/symbolic/the-black-scholes-formula-for-call-option-price.html}{Mathworks example} to verify the correctness of the program:
+\begin{itemize}
+    \item $S = \$100$
+    \item Expiration time is in three months
+    \item $K = \$95$
+    \item Implied volatility $50\%$
+    \item $r = \1\%$  
+\end{itemize}
+The correct answer is $C = \$12.5279$
+
+\end{document}
