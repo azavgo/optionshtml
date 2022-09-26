@@ -23,6 +23,7 @@ pub trait Options {
         }
         
     fn option_price(&self) -> f64;
+
 }
 
 pub struct Call {
@@ -65,7 +66,32 @@ impl Call {
         &self.trade
     }
 
+    pub fn price_expansion(&self) -> Vec<f64> {
+        let number_of_datapoints = 10;
+        let min = 0.05 * self.price(); 
+        let max = 1.95 * self.price(); 
+        let increment = (1f64 / number_of_datapoints as f64) * (max - min);
+        
+        let mut price_expansion = vec![0f64; number_of_datapoints];
+        for i in (1..number_of_datapoints) {
+          price_expansion[i] = price_expansion[i-1] + increment;
+        }
+        price_expansion
+    }
+
+    pub fn theoretical_price(&self, date: Date) -> Vec<f64> {
+        let name = self.name();
+        let price_expansion = self.price_expansion();
+        let mut theoretical_price = vec![0f64; price_expansion.len()];
+        for i in 0..price_expansion.len() {
+            let call = Call::new(name.to_string(), price_expansion[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), Trade::Bought);
+            theoretical_price[i] = call.option_price();
+        }
+        theoretical_price
+    }
+   
 }
+
 
 impl Options for Call {
     fn date(&self) -> &Date {
@@ -158,10 +184,44 @@ impl Options for Put {
     }
 }
 
+pub fn call_profit(call: &Call, call_final: &Call) -> f64 {
+    let trade = call.trade();
+    let trade_final = call_final.trade();
+    
+    let price = call.option_price(); 
+    let price_final = call_final.option_price();
+    match (trade, trade_final) {
+        (Trade::Sold, Trade::Bought) => price - price_final,
+        (Trade::Bought, Trade::Sold) => - price + price_final,
+        (Trade::Bought, Trade::Bought) => - price - price_final,
+        (Trade::Sold, Trade::Sold) => price + price_final,
+    }
+}
+
+pub fn put_profit(put: &Put, put_final: &Put) -> f64 {
+    let trade = put.trade();
+    let trade_final = put_final.trade();
+    
+    let price = put.option_price(); 
+    let price_final = put_final.option_price();
+    match (trade, trade_final) {
+        (Trade::Sold, Trade::Bought) => price - price_final,
+        (Trade::Bought, Trade::Sold) => - price + price_final,
+        (Trade::Bought, Trade::Bought) => - price - price_final,
+        (Trade::Sold, Trade::Sold) => price + price_final,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*; 
 
+    #[test]
+    fn test_01() {
+        
+        assert_eq!(0, 0);
+    }
+    
     #[test]
     fn test_call_option_price_01() {
         let date = Date::new(25, 9, 2022); 
