@@ -1,47 +1,61 @@
-use statrs::distribution::{Normal, ContinuousCDF};
-use chrono::{Utc, TimeZone};
+use timestampepoch::*;
 
-pub fn option_price(s: f64, k: f64, t: f64, sigma: f64, r: f64) -> f64 {
-    let d1 = (1.0 / (sigma * t.sqrt())) * ((s/k).log10() + (r + 0.5 * sigma * sigma) * t);
-    let d2 = d1 - sigma * t.sqrt();
-    let pv = k * (-r*t).exp();
-    //N - standard normal cumulative distribution function
-    let n = Normal::new(0.0, 1.0).unwrap();
-    let n1 = n.cdf(d1);
-    let n2 = n.cdf(d2); 
+mod options; 
+use options::{Call, Put, Trade, Options};
+
+
+fn main() { 
+    let date = Date::new(25, 9, 2022); 
+    let expiration_date = Date::new(16, 12, 2022);
+    let put = Put::new("FTNT".to_string(), 49.19, 60.0, date, expiration_date, 0.385, 0.03, Trade::Bought);
     
-    let c = n1 * s - n2 * pv;
-    c
+    let date = Date::new(25, 9, 2022); 
+    let expiration_date = Date::new(16, 12, 2022);
+    let call = Call::new("FTNT".to_string(), 49.19, 60.0, date, expiration_date, 0.385, 0.03, Trade::Bought);
+    
+    println!("CALL option price = ${:.2}", call.option_price());
+    println!("PUT option price = ${:.2}", put.option_price());
+
+    let date = Date::new(25, 10, 2022); 
+    let expiration_date = Date::new(16, 12, 2022);
+    let put_1 = Put::new("FTNT".to_string(), 49.19, 60.0, date, expiration_date, 0.385, 0.03, Trade::Bought);
+    
+    let date = Date::new(25, 10, 2022); 
+    let expiration_date = Date::new(16, 12, 2022);
+    let call_1 = Call::new("FTNT".to_string(), 49.19, 60.0, date, expiration_date, 0.385, 0.03, Trade::Bought);
+    
+    println!("CALL_1 option price = ${:.2}", call_1.option_price());
+    println!("PUT_1 option price = ${:.2}", put_1.option_price());
+
+    println!("CALL profit: {:.2}", call_profit(&call, &call_1));
+    println!("PUT profit: {:.2}", put_profit(&put, &put_1));
+
 }
 
-//returns time to expration from the date in years
-pub fn time_to_expiration(date: String, expiration_date: String) -> f64 {
-    let dt = Utc.ymd(2022, 9, 24).and_hms_milli(0, 0, 0, 0);
-    let date = dt.timestamp();
-    unimplemented!();
-}
-
-fn main() {
+pub fn call_profit(call: &Call, call_final: &Call) -> f64 {
+    let trade = call.trade();
+    let trade_final = call_final.trade();
     
-    let s = 100.0;
-    let k = 95.0; 
-    let t = 0.25; 
-    let sigma = 0.5; 
-    let r = 0.01; 
-    println!("Option price = ${:.2}", option_price(s, k, t, sigma, r));
-    println!("The correct answer is $12.5279");
-
-    
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*; 
-
-    #[test]
-    fn test_01() {
-        assert_eq!(905.0, 905.0);
+    let price = call.option_price(); 
+    let price_final = call_final.option_price();
+    match (trade, trade_final) {
+        (Trade::Sold, Trade::Bought) => price - price_final,
+        (Trade::Bought, Trade::Sold) => - price + price_final,
+        (Trade::Bought, Trade::Bought) => - price - price_final,
+        (Trade::Sold, Trade::Sold) => price + price_final,
     }
+}
 
-
+pub fn put_profit(put: &Put, put_final: &Put) -> f64 {
+    let trade = put.trade();
+    let trade_final = put_final.trade();
+    
+    let price = put.option_price(); 
+    let price_final = put_final.option_price();
+    match (trade, trade_final) {
+        (Trade::Sold, Trade::Bought) => price - price_final,
+        (Trade::Bought, Trade::Sold) => - price + price_final,
+        (Trade::Bought, Trade::Bought) => - price - price_final,
+        (Trade::Sold, Trade::Sold) => price + price_final,
+    }
 }
