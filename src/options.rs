@@ -1,3 +1,4 @@
+use std::any::{type_name, Any};
 use statrs::distribution::{Normal, ContinuousCDF};
 use timestampepoch::Date;
 
@@ -28,7 +29,7 @@ pub trait Options {
     fn price(&self) -> f64;
 
     fn price_expansion(&self) -> Vec<f64> {
-        let number_of_datapoints = 10;
+        let number_of_datapoints = 100;
         let min = 0.05 * self.price(); 
         let max = 1.95 * self.price(); 
         let increment = (1f64 / number_of_datapoints as f64) * (max - min);
@@ -38,6 +39,32 @@ pub trait Options {
           price_expansion[i] = price_expansion[i-1] + increment;
         }
         price_expansion
+    }
+
+    fn trade(&self) -> &Trade;
+
+    fn theoretical_price(&self, date: Date) -> Vec<f64>;
+
+    fn theoretical_profit_loss(&self, date: Date) -> Vec<f64> {
+        let trade_final = match self.trade() {
+            Trade::Bought => Trade::Sold,
+            Trade::Sold => Trade::Bought,
+        };
+        
+        let trade = self.trade();
+    
+        let theoretical_price = self.theoretical_price(date);
+        let mut theoretical_profit_loss = vec![0f64; theoretical_price.len()];
+    
+        for i in 0..theoretical_price.len() {
+            theoretical_profit_loss[i] = match (trade, trade_final) {
+                (Trade::Sold, Trade::Bought) => self.price() - theoretical_price[i],
+                (Trade::Bought, Trade::Sold) => - self.price() + theoretical_price[i],
+                (Trade::Bought, Trade::Bought) => - self.price() - theoretical_price[i],
+                (Trade::Sold, Trade::Sold) => self.price() + theoretical_price[i],
+            }
+        }
+        theoretical_profit_loss
     }
 }
 
@@ -73,48 +100,7 @@ impl Call {
     pub fn rate(&self) -> f64 {
         self.rate
     }
-
-    pub fn trade(&self) -> &Trade {
-        &self.trade
-    }
-
-    pub fn theoretical_price(&self, date: Date) -> Vec<f64> {
-        let name = self.name();
-        let price_expansion = self.price_expansion();
-        let mut theoretical_price = vec![0f64; price_expansion.len()];
-        for i in 0..price_expansion.len() {
-            let call = Call::new(name.to_string(), price_expansion[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), Trade::Bought);
-            theoretical_price[i] = call.option_price();
-        }
-        theoretical_price
-    }
-
-    pub fn theoretical_profit_loss(&self, date: Date) -> Vec<f64> {
-        let trade_final = match self.trade() {
-            Trade::Bought => Trade::Sold,
-            Trade::Sold => Trade::Bought,
-        };
-        
-        let trade = self.trade();
-    
-        let name = self.name();
-        let theoretical_price = self.theoretical_price(date);
-        let mut theoretical_profit_loss = vec![0f64; theoretical_price.len()];
-    
-        for i in 0..theoretical_price.len() {
-            let call_final = Call::new(name.to_string(), theoretical_price[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), trade_final);
-            
-            theoretical_profit_loss[i] = match (trade, trade_final) {
-                (Trade::Sold, Trade::Bought) => self.price() - call_final.price(),
-                (Trade::Bought, Trade::Sold) => - self.price() + call_final.price(),
-                (Trade::Bought, Trade::Bought) => - self.price() - call_final.price(),
-                (Trade::Sold, Trade::Sold) => self.price() + call_final.price(),
-            }
-        }
-        theoretical_profit_loss
-    }
 }
-
 
 impl Options for Call {
     fn date(&self) -> &Date {
@@ -143,8 +129,24 @@ impl Options for Call {
         let c = n1 * self.price() - n2 * pv;
         c
     }
+
+    fn trade(&self) -> &Trade {
+        &self.trade
+    }
+
+    fn theoretical_price(&self, date: Date) -> Vec<f64> {
+        let name = self.name();
+        let price_expansion = self.price_expansion();
+        let mut theoretical_price = vec![0f64; price_expansion.len()];
+        for i in 0..price_expansion.len() {
+            let call = Call::new(name.to_string(), price_expansion[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), Trade::Bought);
+            theoretical_price[i] = call.option_price();
+        }
+        theoretical_price
+    }
 }
 
+#[derive(Debug)]
 pub struct Put {
     name: String, 
     price: f64, 
@@ -176,46 +178,6 @@ impl Put {
     pub fn rate(&self) -> f64 {
         self.rate
     }
-
-    pub fn trade(&self) -> &Trade {
-        &self.trade
-    }
-
-    pub fn theoretical_price(&self, date: Date) -> Vec<f64> {
-        let name = self.name();
-        let price_expansion = self.price_expansion();
-        let mut theoretical_price = vec![0f64; price_expansion.len()];
-        for i in 0..price_expansion.len() {
-            let put = Put::new(name.to_string(), price_expansion[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), Trade::Bought);
-            theoretical_price[i] = put.option_price();
-        }
-        theoretical_price
-    }
-
-    pub fn theoretical_profit_loss(&self, date: Date) -> Vec<f64> {
-        let trade_final = match self.trade() {
-            Trade::Bought => Trade::Sold,
-            Trade::Sold => Trade::Bought,
-        };
-        
-        let trade = self.trade();
-    
-        let name = self.name();
-        let theoretical_price = self.theoretical_price(date);
-        let mut theoretical_profit_loss = vec![0f64; theoretical_price.len()];
-    
-        for i in 0..theoretical_price.len() {
-            let put_final = Put::new(name.to_string(), theoretical_price[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), trade_final);
-            
-            theoretical_profit_loss[i] = match (trade, trade_final) {
-                (Trade::Sold, Trade::Bought) => self.price() - put_final.price(),
-                (Trade::Bought, Trade::Sold) => - self.price() + put_final.price(),
-                (Trade::Bought, Trade::Bought) => - self.price() - put_final.price(),
-                (Trade::Sold, Trade::Sold) => self.price() + put_final.price(),
-            }
-        }
-        theoretical_profit_loss
-    }
 }
 
 impl Options for Put {
@@ -245,6 +207,63 @@ impl Options for Put {
         let p = -n1 * self.price() + n2 * pv;
         p
     }
+
+    fn trade(&self) -> &Trade {
+        &self.trade
+    }
+
+    fn theoretical_price(&self, date: Date) -> Vec<f64> {
+        let name = self.name();
+        let price_expansion = self.price_expansion();
+        let mut theoretical_price = vec![0f64; price_expansion.len()];
+        for i in 0..price_expansion.len() {
+            let put = Put::new(name.to_string(), price_expansion[i], self.strike(), date, *self.expiration_date(), self.sigma(), self.rate(), Trade::Bought);
+            theoretical_price[i] = put.option_price();
+        }
+        theoretical_price
+    }
+}
+
+#[derive(Debug)]
+pub enum Option <'a> {
+    Call(&'a Call), 
+    Put(&'a Put),
+}
+
+pub fn strategy_profit_loss(strategy: Vec<Option>, date: Date) -> Vec<f64> {
+    let mut theoretical_strategy: Vec<Vec<f64>> = Vec::new();
+    for i in 0..strategy.len() {
+        match strategy[i] {
+            Option::Call(call) => theoretical_strategy.push(call.theoretical_profit_loss(date)),
+            Option::Put(put) => theoretical_strategy.push(put.theoretical_profit_loss(date)),
+        }
+    }
+    let mut profit_loss = vec![0f64; theoretical_strategy[0].len()];
+    for i in 0..profit_loss.len() {
+        for j in 0..theoretical_strategy.len() {
+            profit_loss[i] += theoretical_strategy[j][i];
+        }
+    }
+    profit_loss
+}
+
+//Returns the type name of T as String. Useful to return a CALL or a PUT type
+pub fn type_of<T>(_: &T) -> String {
+    format!("{}", std::any::type_name::<T>())
+}
+
+//Writes strategy profit and loss data to file in a format suitable to GnuPlot
+pub fn profit_loss_file(price_expansion: Vec<f64>, profit_loss: Vec<f64>) -> Result<(), std::io::Error> {
+    let mut profit_loss_string = vec!["".to_string(); profit_loss.len()]; 
+    
+    for i in 0..profit_loss_string.len() {
+        profit_loss_string[i] = format!("{}, {}\n", price_expansion[i], profit_loss[i]);
+    }
+    
+    let file_path = "profit_loss.txt";
+    std::fs::write(file_path, profit_loss_string.join(""))?;     
+    
+    Ok(())
 }
 
 #[cfg(test)]
